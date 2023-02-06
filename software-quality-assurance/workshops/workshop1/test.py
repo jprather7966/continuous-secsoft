@@ -24,5 +24,8 @@ class TestCalc(unittest.TestCase):
     def testDiv3(self):
         self.assertEqual(0, source.performDiv(0, 20), "Results should be 0.")
 
+    def testDivZero(self):
+        self.assertEqual("Put in correct divisor", source.performSub(20, 0), "Bug in implementation.")    
+
 if __name__ == '__main__': 
     unittest.main() 
