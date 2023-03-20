@@ -133,12 +133,12 @@ def getFunctionDefinitions(path2program):
     func_var_list = []
     if os.path.exists(path2program):
         full_tree = ast.parse( open( path2program  ).read() )
-        # print( ast.dump( full_tree )  )
+        #print( ast.dump( full_tree )  )
         for stmt_ in full_tree.body:
             for node_ in ast.walk(stmt_):
                 if isinstance(node_, ast.FunctionDef):
                     func_def_dict = node_.__dict__
-                    # print(func_def_dict) 
+                    #print(func_def_dict) 
                     func_name, func_args, func_body_parts = func_def_dict['name'], func_def_dict['args'], func_def_dict['body']
                     if(isinstance( func_args, ast.arguments )):
                         arg_index = 1
@@ -146,7 +146,7 @@ def getFunctionDefinitions(path2program):
                         for arg_ in args:
                             call_sequence_ls.append( (func_name, arg_.__dict__['arg'], 'FUNC_DEFI:' + str(arg_index) ) )
                             arg_index = arg_index + 1
-                    # print(func_body_parts)
+                    #print(func_body_parts)
                     for body_ in func_body_parts:
                         assign_dict = body_.__dict__ 
                         if (isinstance( body_, ast.Assign )):
@@ -161,14 +161,41 @@ def getFunctionDefinitions(path2program):
 
 def trackTaint(val2track, df_list_param): 
     var_, call_, func_def, func_var = df_list_param[0], df_list_param[1], df_list_param[2], df_list_param[3]
+    trace=[str(val2track) + "->"]
+
+    for var in range(len(var_.index)):
+        if(var_["RHS"].values[var] == val2track):
+            val2track = (var_["LHS"].values[var])
+            trace.append(val2track + "->")
+
+    for call in range(len(call_.index)):
+        if(call_["ARG_NAME"].values[call] == val2track):
+            val2track = func_def["ARG_NAME"].values[call]
+            trace.append(val2track + "->")
+
+    for f_var in range(len(func_var.index)):
+        value = func_var["RHS"].values[f_var]
+        
+        if isinstance(value, str) and value.startswith(","):
+            for sub in value.split(","):
+                if(sub == val2track):
+                    trace.append(func_var["LHS"].values[f_var])
+        else:
+            if(value == val2track):
+                trace.append(func_var["LHS"].values[f_var])
     
+    for element in trace:
+        print(element, end="")
+
+
+
     #TODO: Complete this method so that the output is 1000->val1->v1->res 
 
 
 def checkFlow(data, code):
     full_tree = None 
     if os.path.exists( code ):
-       full_tree = ast.parse( open( code  ).read() )    
+       full_tree = ast.parse(open(code).read())    
        # First let us obtain the variables in forms of expressions 
        fullVarList = getVariables(full_tree, 'VAR_ASSIGNMENT') 
        # Next let us get function invocations by looking into function calls
@@ -179,9 +206,13 @@ def checkFlow(data, code):
        # Then print a path like the following: 
        # 1000->val1->v1->res 
        var_df       = pd.DataFrame( fullVarList, columns =['LHS', 'RHS', 'TYPE']  )
+       #print(var_df)
        call_df      = pd.DataFrame( call_list, columns =['LHS', 'FUNC_NAME', 'ARG_NAME', 'TYPE']   )
+       #print(call_df)
        func_def_df  = pd.DataFrame( funcDefList, columns =['FUNC_NAME', 'ARG_NAME', 'TYPE']   )
+       #print(func_def_df)
        func_var_df  = pd.DataFrame( funcvarList, columns =['LHS', 'RHS', 'TYPE']   )
+       #print(func_var_df)
        info_df_list = [var_df, call_df, func_def_df, func_var_df]
        trackTaint( data , info_df_list ) 
 
@@ -190,6 +221,7 @@ def checkFlow(data, code):
 
 
 if __name__=='__main__':
-    input_program = 'calc.py' 
+    input_program = 'software-quality-assurance\workshops\workshop3\calc.py' 
     data2track    = 1000
     checkFlow( data2track, input_program )
+    
